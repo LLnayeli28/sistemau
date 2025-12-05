@@ -1,0 +1,34 @@
+// src/profesor/profesores.prisma
+
+generator profesoresClient {
+  provider = "prisma-client-js"
+  output   = "../../generated/profesores"
+}
+
+datasource profesoresDb {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_PROFESORES")
+}
+
+// SCHEMA 2: PROFESOR / TÍTULO
+
+model Profesor {
+  id      Int              @id @default(autoincrement())
+  nombre  String
+  titulos ProfesorTitulo[]
+}
+
+model Titulo {
+  id         Int              @id @default(autoincrement())
+  nombre     String
+  profesores ProfesorTitulo[]
+}
+
+model ProfesorTitulo {
+  profesorId Int
+  tituloId   Int
+  profesor   Profesor @relation(fields: [profesorId], references: [id])
+  titulo     Titulo   @relation(fields: [tituloId], references: [id])
+
+  @@id([profesorId, tituloId])
+}

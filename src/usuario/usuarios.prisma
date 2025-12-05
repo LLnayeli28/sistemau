@@ -1,0 +1,76 @@
+// src/usuario/usuarios.prisma
+
+generator usuariosClient {
+  provider = "prisma-client-js"
+  output   = "../../generated/usuarios"
+}
+
+datasource usuariosDb {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_USUARIOS")
+}
+
+// SCHEMA 1: USUARIO / ROL / PERMISO / INSCRIPCIÓN
+
+model Usuario {
+  id        Int          @id @default(autoincrement())
+  nombre    String
+  email     String       @unique
+  password  String
+  createdAt DateTime     @default(now())
+  roles     UsuarioRol[]
+}
+
+model Rol {
+  id       Int          @id @default(autoincrement())
+  nombre   String       @unique
+  usuarios UsuarioRol[]
+  permisos RolPermiso[]
+}
+
+model Permiso {
+  id          Int          @id @default(autoincrement())
+  codigo      String       @unique
+  descripcion String?
+  roles       RolPermiso[]
+}
+
+model UsuarioRol {
+  usuarioId Int
+  rolId     Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  rol       Rol     @relation(fields: [rolId], references: [id])
+
+  @@id([usuarioId, rolId])
+}
+
+model RolPermiso {
+  rolId     Int
+  permisoId Int
+  rol       Rol     @relation(fields: [rolId], references: [id])
+  permiso   Permiso @relation(fields: [permisoId], references: [id])
+
+  @@id([rolId, permisoId])
+}
+
+// Inscripción simple (ID estudiante, ID curso)
+model Estudiante {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  inscripciones Inscripcion[]
+}
+
+model Materia {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  inscripciones Inscripcion[]
+}
+
+model Inscripcion {
+  id           Int        @id @default(autoincrement())
+  estudianteId Int
+  materiaId    Int
+  estudiante   Estudiante @relation(fields: [estudianteId], references: [id])
+  materia      Materia    @relation(fields: [materiaId], references: [id])
+  fecha        DateTime   @default(now())
+}

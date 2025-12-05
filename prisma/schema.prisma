@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//// ---------- SEGURIDAD / USUARIOS ----------
+
+model Usuario {
+  id         Int          @id @default(autoincrement())
+  nombre     String
+  email      String       @unique
+  password   String
+  estudiante Estudiante?
+  profesor   Profesor?
+  roles      UsuarioRol[]
+  createdAt  DateTime     @default(now())
+}
+
+model Rol {
+  id       Int          @id @default(autoincrement())
+  nombre   String       @unique
+  usuarios UsuarioRol[]
+  permisos RolPermiso[]
+}
+
+model Permiso {
+  id          Int          @id @default(autoincrement())
+  codigo      String       @unique
+  descripcion String?
+  roles       RolPermiso[]
+}
+
+model UsuarioRol {
+  usuarioId Int
+  rolId     Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  rol       Rol     @relation(fields: [rolId], references: [id])
+
+  @@id([usuarioId, rolId])
+}
+
+model RolPermiso {
+  rolId     Int
+  permisoId Int
+  rol       Rol     @relation(fields: [rolId], references: [id])
+  permiso   Permiso @relation(fields: [permisoId], references: [id])
+
+  @@id([rolId, permisoId])
+}
+
+//// ---------- PARTE ACADÉMICA ----------
+
+/// Carreras
+model Carrera {
+  id          Int          @id @default(autoincrement())
+  nombre      String
+  materias    CMateria[]
+  estudiantes Estudiante[]
+  profesores  CProfesor[]
+  ciclos      Ciclo[]
+}
+
+/// Ciclos por carrera
+model Ciclo {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  numero    Int?
+  carreraId Int
+  carrera   Carrera   @relation(fields: [carreraId], references: [id])
+  materias  Materia[]
+}
+
+/// SCHEMA PRISMA PRINCIPAL MATERIA
+
+model Materia {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  cicloId       Int
+  ciclo         Ciclo         @relation(fields: [cicloId], references: [id])
+  carreras      CMateria[]
+  profesores    PMateria[]
+  inscripciones Inscripcion[]
+  horarios      Horario[]
+}
+
+/// SCHEMA PRISMA PRINCIPAL PROFESOR 
+
+model Profesor {
+  id        Int              @id @default(autoincrement())
+  nombre    String
+  materias  PMateria[]
+  carreras  CProfesor[]
+  usuarioId Int?             @unique
+  usuario   Usuario?         @relation(fields: [usuarioId], references: [id])
+  titulos   ProfesorTitulo[]
+}
+
+/// SCHEMA PRISMA ESTUDIANTE 
+model Estudiante {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  carreraId     Int
+  carrera       Carrera       @relation(fields: [carreraId], references: [id])
+  usuarioId     Int?          @unique
+  usuario       Usuario?      @relation(fields: [usuarioId], references: [id])
+  inscripciones Inscripcion[]
+}
+
+/// Inscripciones estudiante–materia (aquí se ve relación con los 3 principales)
+model Inscripcion {
+  id           Int        @id @default(autoincrement())
+  estudianteId Int
+  estudiante   Estudiante @relation(fields: [estudianteId], references: [id])
+  materiaId    Int
+  materia      Materia    @relation(fields: [materiaId], references: [id])
+  fecha        DateTime   @default(now())
+
+  nombre      String?
+  descripcion String?
+}
+
+/// Periodos académicos
+model Periodo {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  fechaInicio DateTime
+  fechaFin    DateTime
+  horarios    Horario[]
+}
+
+/// Horarios por materia y periodo
+model Horario {
+  id         Int     @id @default(autoincrement())
+  dia        String
+  horaInicio String
+  horaFin    String
+  materiaId  Int
+  periodoId  Int
+  materia    Materia @relation(fields: [materiaId], references: [id])
+  periodo    Periodo @relation(fields: [periodoId], references: [id])
+}
+
+//// ---------- TABLAS INTERMEDIAS EXISTENTES ----------
+
+/// Carrera–Materia
+model CMateria {
+  id        Int     @id @default(autoincrement())
+  carreraId Int
+  materiaId Int
+  carrera   Carrera @relation(fields: [carreraId], references: [id])
+  materia   Materia @relation(fields: [materiaId], references: [id])
+
+  @@unique([carreraId, materiaId])
+}
+
+/// Profesor–Materia
+model PMateria {
+  id         Int      @id @default(autoincrement())
+  profesorId Int
+  materiaId  Int
+  profesor   Profesor @relation(fields: [profesorId], references: [id])
+  materia    Materia  @relation(fields: [materiaId], references: [id])
+
+  @@unique([profesorId, materiaId])
+}
+
+/// Carrera–Profesor
+model CProfesor {
+  id         Int      @id @default(autoincrement())
+  carreraId  Int
+  profesorId Int
+  carrera    Carrera  @relation(fields: [carreraId], references: [id])
+  profesor   Profesor @relation(fields: [profesorId], references: [id])
+
+  @@unique([carreraId, profesorId])
+}
+
+//// ---------- TÍTULOS DE PROFESOR ----------
+
+model Titulo {
+  id         Int              @id @default(autoincrement())
+  nombre     String
+  profesores ProfesorTitulo[]
+}
+
+model ProfesorTitulo {
+  profesorId Int
+  tituloId   Int
+  profesor   Profesor @relation(fields: [profesorId], references: [id])
+  titulo     Titulo   @relation(fields: [tituloId], references: [id])
+
+  @@id([profesorId, tituloId])
+}
